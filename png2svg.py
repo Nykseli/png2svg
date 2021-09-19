@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+
+import sys
 from PIL import Image
 
 def svg_header(width, height):
@@ -36,8 +39,8 @@ class PngImage:
         self.x = 0
         self.y = 0
         # list of scanned SVGBlocks
+        self.block_data = []
         self.scanned_blocks = {}
-        print(svg_header(self.width, self.height))
 
     def set_and_find_next_xy(self):
         self.x = 0
@@ -56,6 +59,7 @@ class PngImage:
 
 
     def add_block(self, block):
+        self.block_data.append(block)
         for y in range(block.y, block.h + block.y):
             if not y in self.scanned_blocks:
                 self.scanned_blocks[y] = {}
@@ -115,7 +119,7 @@ class PngImage:
             self.y - start_y + 1, # list are 0 indexed so the height is always 1 too small
             line_width,
         )
-        print(block)
+
         self.add_block(block)
 
         # Reset y if the full line hasn't been scanned
@@ -149,13 +153,29 @@ class PngImage:
     def convert(self):
         while not self.is_traversed():
             self.scan_block()
-        #while self.y < self.height and self.x < self.width:
-        #    self.scan_block()
+
+    def save(self, svg_path):
+        svg_xml = svg_header(self.width, self.height)
+        rects = [str(block) for block in self.block_data]
+        svg_xml += ''.join(rects)
+        svg_xml += '</svg>'
+
+        with open(svg_path, 'w+') as svg_file:
+            svg_file.write(svg_xml)
+
 
     def __del__(self):
-        print('</svg>')
         self.imagedata.close()
 
 
-img = PngImage('pixel-art.png')
-img.convert()
+def main():
+    if len(sys.argv) < 3:
+        print("Usage: ./png2svg.py input.png output.svg")
+        exit()
+
+    img = PngImage(sys.argv[1])
+    img.convert()
+    img.save(sys.argv[2])
+
+if __name__ == '__main__':
+    main()
